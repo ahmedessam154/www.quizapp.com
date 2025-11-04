@@ -560,7 +560,7 @@
         // Matrix Animation Logic
         let matrixCtx = matrixAnimation.getContext('2d');
         let matrixInterval;
-        let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%';
+        let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%'; // <--- (الإصلاح) إرجاعه كنص
         let drops = [];
 
         function startMatrixAnimation() {
@@ -569,7 +569,11 @@
             matrixAnimation.height = window.innerHeight;
             matrixCtx = matrixAnimation.getContext('2d');
             
-            letters = letters.split('');
+            // (الإصلاح) التحقق من نوع المتغير قبل تقسيمه
+            if (typeof letters === 'string') {
+                letters = letters.split('');
+            }
+            
             let columns = matrixAnimation.width / 20;
             drops = [];
             for (let i = 0; i < columns; i++) {
@@ -792,9 +796,11 @@
         function timeUp() {
             stopTimer();
             // تحديد إجابة وهمية (خاطئة)
-            selectedButton = document.createElement('button'); // زر وهمي
-            selectedButton.dataset.correct = "false"; // اعتباره خطأ
-            handleConfirmNext(); // التعامل معه كإجابة خاطئة
+            if (!answered) { // التأكد من أن الوقت انتهى قبل أن يختار المستخدم
+                selectedButton = document.createElement('button'); // زر وهمي
+                selectedButton.dataset.correct = "false"; // اعتباره خطأ
+                handleConfirmNext(); // التعامل معه كإجابة خاطئة
+            }
         }
 
         //==================================
