@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senior Programmer Quiz App</title>
+    
+    <!-- 1. Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Google Font 'Cairo' -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- 3. Custom CSS (Themes, Animations, Tweaks) -->
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            transition: background-color 0.5s ease;
+            /* توسيط المحتوى في الصفحة */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            overflow: hidden; /* لمنع ظهور scrollbars بسبب الأنيميشن */
+        }
+
+        /* حاوية الأنيميشن الرئيسية (مخفية افتراضياً) */
+        #animation-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            display: none; /* يتم إظهاره بالجافاسكريبت */
+            overflow: hidden;
+        }
+
+        /* --- Theme: Default (General) --- */
+        body.theme-default {
+            background-color: #f0f4f8; /* خلفية رمادية فاتحة */
+        }
+        .theme-default .quiz-box {
+            background-color: white;
+            color: #333;
+        }
+        .theme-default .btn-primary { background-color: #3b82f6; color: white; }
+        .theme-default .btn-primary:hover { background-color: #2563eb; }
+        .theme-default .btn-secondary { background-color: #e5e7eb; color: #374151; }
+        .theme-default .btn-secondary:hover { background-color: #d1d5db; }
+        
+        .theme-default .answer-btn.selected {
+            background-color: #bfdbfe; /* أزرق فاتح */
+            border-color: #3b82f6;
+            border-width: 2px;
+        }
+        .theme-default .answer-btn.correct {
+            border-color: #10b981; /* أخضر */
+            border-width: 4px;
+        }
+        .theme-default .answer-btn.wrong {
+            border-color: #ef4444; /* أحمر */
+            border-width: 4px;
+        }
+        /* (الإصلاح) إزالة اللون الأزرق من الإجابة الغلط */
+        .theme-default .answer-btn.wrong.selected {
+             background-color: #fee2e2; /* لون أحمر خفيف بدلاً من الأزرق */
+        }
+        .theme-default .answer-btn.show-correct {
+            background-color: transparent; 
+            border-color: #10b981; /* أخضر */
+            border-width: 4px;
+        }
+        /* أنيميشن علامات الاستفهام */
+        #general-animation {
+            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .question-mark {
+            position: absolute;
+            font-size: 5rem;
+            color: rgba(0, 0, 0, 0.05);
+            animation: fade-float 15s infinite ease-in-out;
+            user-select: none;
+        }
+        .question-mark:nth-child(1) { top: 10%; left: 15%; animation-delay: 0s; }
+        .question-mark:nth-child(2) { top: 50%; left: 30%; animation-delay: -5s; font-size: 8rem; }
+        .question-mark:nth-child(3) { top: 30%; left: 70%; animation-delay: -10s; }
+        .question-mark:nth-child(4) { top: 80%; left: 80%; animation-delay: -7s; font-size: 6rem; }
+        .question-mark:nth-child(5) { top: 70%; left: 10%; animation-delay: -3s; }
+        @keyframes fade-float {
+            0%, 100% { opacity: 0; transform: translateY(0); }
+            50% { opacity: 1; transform: translateY(-20px); }
+        }
+
+
+        /* --- Theme: Programming (Matrix) --- */
+        body.theme-programming {
+            background-color: #000;
+        }
+        .theme-programming .quiz-box {
+            background-color: rgba(17, 24, 39, 0.85); /* أزرق داكن شبه شفاف */
+            color: #e5e7eb;
+            border: 1px solid #374151;
+            backdrop-filter: blur(5px);
+        }
+        .theme-programming .btn-primary { background-color: #10b981; color: #064e3b; }
+        .theme-programming .btn-primary:hover { background-color: #059669; }
+        .theme-programming .btn-secondary { background-color: #374151; color: #d1d5db; }
+        .theme-programming .btn-secondary:hover { background-color: #4b5563; }
+        .theme-programming .answer-btn { background-color: rgba(55, 65, 81, 0.5); border-color: #4b5563; }
+        .theme-programming .answer-btn:hover { background-color: rgba(75, 85, 99, 0.7); }
+        .theme-programming .answer-btn.selected { background-color: #1d4ed8; border-color: #3b82f6; border-width: 2px; }
+        .theme-programming .answer-btn.correct { border-color: #10b981; border-width: 4px; }
+        .theme-programming .answer-btn.wrong { border-color: #ef4444; border-width: 4px; }
+        .theme-programming .answer-btn.wrong.selected { background-color: rgba(153, 27, 27, 0.4); }
+        .theme-programming .answer-btn.show-correct { background-color: rgba(55, 65, 81, 0.5); border-color: #10b981; border-width: 4px; }
+        #matrix-animation { display: none; }
+
+
+        /* --- Theme: Science (Space) --- */
+        body.theme-science {
+            background-color: #0c0a1d; /* بنفسجي داكن جداً (فضاء) */
+        }
+        .theme-science .quiz-box {
+            background-color: rgba(23, 20, 43, 0.8); /* بنفسجي شبه شفاف */
+            color: #e0e7ff;
+            border: 1px solid #4f46e5;
+            backdrop-filter: blur(5px);
+        }
+        .theme-science .btn-primary { background-color: #8b5cf6; color: white; }
+        .theme-science .btn-primary:hover { background-color: #7c3aed; }
+        .theme-science .btn-secondary { background-color: #3730a3; color: #e0e7ff; }
+        .theme-science .btn-secondary:hover { background-color: #4338ca; }
+        .theme-science .answer-btn { background-color: rgba(67, 56, 202, 0.3); border-color: #4f46e5; }
+        .theme-science .answer-btn:hover { background-color: rgba(79, 70, 229, 0.5); }
+        .theme-science .answer-btn.selected { background-color: #a5b4fc; border-color: #c7d2fe; border-width: 2px; color: #1e1b4b; }
+        .theme-science .answer-btn.correct { border-color: #6ee7b7; border-width: 4px; }
+        .theme-science .answer-btn.wrong { border-color: #f87171; border-width: 4px; }
+        .theme-science .answer-btn.wrong.selected { background-color: rgba(153, 27, 27, 0.4); }
+        .theme-science .answer-btn.show-correct { background-color: rgba(67, 56, 202, 0.3); border-color: #6ee7b7; border-width: 4px; }
+        
+        #starfield-animation {
+            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: transparent;
+            z-index: -10;
+            animation: move-stars 50s linear infinite;
+        }
+        #stars1 {
+            background-image: radial-gradient(1px 1px at 20px 30px, #eee, rgba(0,0,0,0)), radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)), radial-gradient(1px 1px at 50px 160px, #ddd, rgba(0,0,0,0)), radial-gradient(1px 1px at 90px 40px, #fff, rgba(0,0,0,0)), radial-gradient(1px 1px at 130px 80px, #fff, rgba(0,0,0,0)), radial-gradient(1px 1px at 160px 120px, #ddd, rgba(0,0,0,0));
+            background-size: 200px 200px;
+            animation-duration: 50s; /* الأبطأ */
+        }
+        #stars2 {
+            background-image: radial-gradient(2px 2px at 30px 50px, #eee, rgba(0,0,0,0)), radial-gradient(2px 2px at 80px 90px, #fff, rgba(0,0,0,0)), radial-gradient(2px 2px at 120px 190px, #ddd, rgba(0,0,0,0)), radial-gradient(2px 2px at 170px 60px, #fff, rgba(0,0,0,0)), radial-gradient(2px 2px at 190px 110px, #fff, rgba(0,0,0,0));
+            background-size: 200px 200px;
+            animation-duration: 30s; /* متوسط */
+        }
+        #stars3 {
+            background-image: radial-gradient(3px 3px at 50px 100px, #fff, rgba(0,0,0,0)), radial-gradient(3px 3px at 100px 150px, #fff, rgba(0,0,0,0)), radial-gradient(3px 3px at 180px 30px, #fff, rgba(0,0,0,0));
+            background-size: 200px 200px;
+            animation-duration: 15s; /* الأسرع */
+        }
+        @keyframes move-stars {
+            from { transform: translateY(0); }
+            to { transform: translateY(200px); }
+        }
+
+
+        /* --- Theme: History (Parchment) --- */
+        body.theme-history {
+            background-color: #f5eeda; /* لون ورق قديم */
+        }
+        .theme-history .quiz-box {
+            background-color: rgba(253, 246, 227, 0.85); /* بيج شفاف */
+            color: #5a4f3c;
+            border: 2px solid #c9b79c;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(2px);
+        }
+        .theme-history .btn-primary { background-color: #8b4513; color: #f5eeda; }
+        .theme-history .btn-primary:hover { background-color: #a0522d; }
+        .theme-history .btn-secondary { background-color: #d2b48c; color: #5a4f3c; }
+        .theme-history .btn-secondary:hover { background-color: #c1a37a; }
+        .theme-history .answer-btn { background-color: rgba(210, 180, 140, 0.3); border-color: #c1a37a; }
+        .theme-history .answer-btn:hover { background-color: rgba(210, 180, 140, 0.6); }
+        .theme-history .answer-btn.selected { background-color: #e6d8b9; border-color: #8b4513; border-width: 2px; }
+        .theme-history .answer-btn.correct { border-color: #556b2f; border-width: 4px; }
+        .theme-history .answer-btn.wrong { border-color: #8b0000; border-width: 4px; }
+        .theme-history .answer-btn.wrong.selected { background-color: rgba(217, 166, 166, 0.4); }
+        .theme-history .answer-btn.show-correct { background-color: rgba(210, 180, 140, 0.3); border-color: #556b2f; border-width: 4px; }
+
+        #old-film-animation {
+            display: none; 
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        #old-film-animation::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: repeating-linear-gradient(rgba(0,0,0,0) 0%, rgba(0,0,0,0) 95%, rgba(0,0,0,0.3) 100%);
+            background-size: 100% 4px;
+            animation: scratch 3s infinite linear;
+            opacity: 0.3;
+        }
+        #old-film-animation::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXVtbW1paWlpVVVbpKSiqqqfnp6ZmZmbnp6goKChoaGjra2lra2lo6OkpKSnp6epqamqqqqrq6usrKytra28vLzFxcXGxsYvLy+jF3i6AAAAB3RSTlP5/AD+AD+4PjQBAAAAyUlEQVRIx+3WvQ6CMBAF0D3LIA4gCIfy/1/pMGlkaSjrrp30P1uKKH8pFWpZfIZ2XlqfATvrsz/BQ9n1cPrrI06RrmIbX/xkRWkL2y5gUFhRUVAREVGqql5g/pRKs8kQY1EBiAACCCCAgAJKq6A6s89UKr3qjKzNkVEEBYWaEVGgqCEyokLBYWaEVGigqCEyIqLBYQacechQk+ex6yYvDGmZKcQO/26bYVRVVe2VbX/yblv9aN1pgr2aQ3z/g/xBFxIWvV4cAAAAAElFTkSuQmCC');
+            opacity: 0.1;
+            animation: grain 1.5s steps(1) infinite;
+        }
+        @keyframes scratch { 0% { transform: translateY(0); } 100% { transform: translateY(100%); } }
+        @keyframes grain {
+            0%, 100% { transform: translate(0, 0); } 10% { transform: translate(-1%, -1%); } 20% { transform: translate(1%, 1%); } 30% { transform: translate(-2%, -2%); } 40% { transform: translate(2%, 2%); } 50% { transform: translate(-1%, 1%); } 60% { transform: translate(1%, -1%); } 70% { transform: translate(-2%, 1%); } 80% { transform: translate(2%, -2%); } 90% { transform: translate(-1%, 2%); }
+        }
+
+    </style>
+</head>
+
+<!-- الواجهة الافتراضية عند التحميل -->
+<body class="theme-default">
+
+    <!-- حاوية الأنيميشن الخلفية (مخفية) -->
+    <div id="animation-container">
+        <div id="general-animation" class="hidden">
+            <div class="question-mark">?</div>
+            <div class="question-mark">؟</div>
+            <div class="question-mark">?</div>
+            <div class="question-mark">؟</div>
+            <div class="question-mark">?</div>
+        </div>
+        <div id="starfield-animation" class="hidden">
+            <div class="stars" id="stars1"></div>
+            <div class="stars" id="stars2"></div>
+            <div class="stars" id="stars3"></div>
+        </div>
+        <canvas id="matrix-animation" class="hidden"></canvas>
+        <div id="old-film-animation" class="hidden"></div>
+    </div>
+    
+    <!-- الحاوية الرئيسية للتطبيق -->
+    <div class="quiz-container">
+        
+        <div class="quiz-box w-full max-w-2xl rounded-lg shadow-2xl p-6 transition-all duration-500">
+
+            <!-- 1. شاشة اختيار القسم (الرئيسية) -->
+            <div id="category-screen">
+                <h1 class="text-3xl font-bold text-center mb-6">اختر قسماً</h1>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button class="category-btn btn-secondary p-6 rounded-lg text-xl font-semibold hover:scale-105 transition-transform" data-category="general" title="أسئلة عامة">
+                        🧠 أسئلة عامة
+                    </button>
+                    <button class="category-btn btn-secondary p-6 rounded-lg text-xl font-semibold hover:scale-105 transition-transform" data-category="programming" title="برمجة">
+                        💻 برمجة
+                    </button>
+                    <button class="category-btn btn-secondary p-6 rounded-lg text-xl font-semibold hover:scale-105 transition-transform" data-category="history" title="تاريخ">
+                        📜 تاريخ
+                    </button>
+                    <button class="category-btn btn-secondary p-6 rounded-lg text-xl font-semibold hover:scale-105 transition-transform" data-category="science" title="علوم">
+                        🪐 علوم
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. شاشة اختيار مستوى الصعوبة -->
+            <div id="difficulty-screen" class="hidden">
+                <button id="back-to-categories" class="btn-secondary py-1 px-3 rounded-md text-sm mb-4">&larr; العودة للأقسام</button>
+                <h2 id="difficulty-title" class="text-2xl font-bold text-center mb-6">الخطوة 2: اختر مستوى</h2>
+                <div class="flex flex-col gap-4">
+                    <button class="difficulty-btn btn-secondary p-4 rounded-lg text-lg hover:scale-105 transition-transform" data-difficulty="easy">
+                        سهل
+                    </button>
+                    <button class="difficulty-btn btn-secondary p-4 rounded-lg text-lg hover:scale-105 transition-transform" data-difficulty="medium">
+                        متوسط
+                    </button>
+                    <button class="difficulty-btn btn-secondary p-4 rounded-lg text-lg hover:scale-105 transition-transform" data-difficulty="hard">
+                        صعب
+                    </button>
+                    <button id="senior-level-btn" class="difficulty-btn btn-secondary p-4 rounded-lg text-lg hover:scale-105 transition-transform" data-difficulty="senior">
+                        Senior Programmer
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. شاشة الاختبار -->
+            <div id="quiz-screen" class="hidden">
+                <!-- شريط المعلومات (العداد والمؤقت) -->
+                <div class="flex justify-between items-center mb-4">
+                    <span id="question-counter" class="text-lg font-semibold">السؤال 1 / 10</span>
+                    <div id="timer" class="text-2xl font-bold bg-red-500 text-white px-4 py-1 rounded-lg">30</div>
+                </div>
+                
+                <!-- نص السؤال -->
+                <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px]">...يتم تحميل السؤال</h2>
+                
+                <!-- حاوية الإجابات -->
+                <div id="answer-buttons" class="flex flex-col gap-4">
+                    <!-- أزرار الإجابات تضاف هنا -->
+                </div>
+                
+                <!-- زر التأكيد / التالي -->
+                <button id="confirm-next-btn" class="btn-primary w-full p-4 rounded-lg text-lg font-bold mt-6" disabled>
+                    تأكيد
+                </button>
+            </div>
+
+            <!-- 4. شاشة النتائج -->
+            <div id="results-screen" class="hidden text-center">
+                <h2 class="text-3xl font-bold mb-4">انتهى الاختبار!</h2>
+                <div id="score-circle" class="w-48 h-48 rounded-full flex items-center justify-center text-5xl font-bold mx-auto mb-6 border-8 border-gray-200">
+                    0%
+                </div>
+                <p id="score-text" class="text-xl mb-6">لقد أجبت على 0 من 0 بشكل صحيح.</p>
+                
+                <button id="go-home" class="btn-primary p-4 rounded-lg text-lg w-full">
+                    العودة للرئيسية
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- 4. JavaScript (The Brain) -->
+    <script>
+        
+        //==================================
+        // 1. بنك الأسئلة
+        //==================================
+        const quizData = {
+            "general": {
+                "title": "أسئلة عامة",
+                "levels": {
+                    "easy": [
+                        { q: "ما هي عاصمة فرنسا؟", a: [{t: "لندن", c: false}, {t: "برلين", c: false}, {t: "باريس", c: true}, {t: "مدريد", c: false}] },
+                        { q: "كم عدد قارات العالم؟", a: [{t: "5", c: false}, {t: "6", c: false}, {t: "7", c: true}, {t: "8", c: false}] },
+                        { q: "ما هو أكبر محيط في العالم؟", a: [{t: "الأطلسي", c: false}, {t: "الهادي", c: true}, {t: "الهندي", c: false}, {t: "المتجمد الشمالي", c: false}] }
+                    ],
+                    "medium": [
+                        { q: "في أي عام بدأت الحرب العالمية الثانية؟", a: [{t: "1939", c: true}, {t: "1941", c: false}, {t: "1914", c: false}, {t: "1945", c: false}] },
+                        { q: "من هو مؤلف 'هاملت'؟", a: [{t: "تشارلز ديكنز", c: false}, {t: "ويليام شكسبير", c: true}, {t: "ليو تولستوي", c: false}, {t: "جورج أورويل", c: false}] },
+                        { q: "ما هي الدولة المعروفة باسم 'بلاد الشمس المشرقة'؟", a: [{t: "الصين", c: false}, {t: "اليابان", c: true}, {t: "كوريا الجنوبية", c: false}, {t: "فيتنام", c: false}] },
+                        { q: "ما هي أعلى قمة جبلية في العالم؟", a: [{t: "كي 2", c: false}, {t: "كانغشينجونغا", c: false}, {t: "إيفرست", c: true}, {t: "لوتس", c: false}] }
+                    ],
+                    "hard": [
+                        { q: "ما هو العنصر الكيميائي الأكثر وفرة في قشرة الأرض؟", a: [{t: "الحديد", c: false}, {t: "الأكسجين", c: true}, {t: "السيليكون", c: false}, {t: "الألومنيوم", c: false}] },
+                        { q: "كم عدد عظام جسم الإنسان البالغ؟", a: [{t: "206", c: true}, {t: "212", c: false}, {t: "201", c: false}, {t: "198", c: false}] },
+                        { q: "من رسم لوحة 'الموناليزا'؟", a: [{t: "مايكل أنجلو", c: false}, {t: "ليوناردو دافنشي", c: true}, {t: "رافائيل", c: false}, {t: "دوناتيلو", c: false}] },
+                        { q: "ما هي أعمق نقطة في محيطات العالم؟", a: [{t: "خندق بورتوريكو", c: false}, {t: "خندق ماريانا", c: true}, {t: "خندق تونغا", c: false}, {t: "خندق الفلبين", c: false}] },
+                        { q: "في أي مدينة يقع مقر الأمم المتحدة؟", a: [{t: "جنيف", c: false}, {t: "فيينا", c: false}, {t: "لاهاي", c: false}, {t: "نيويورك", c: true}] }
+                    ]
+                }
+            },
+            "programming": {
+                "title": "برمجة",
+                "levels": {
+                    "easy": [
+                        { q: "ماذا تعني 'HTML'؟", a: [{t: "HyperText Markup Language", c: true}, {t: "HighText Machine Language", c: false}, {t: "Hyperlink and Text Markup Language", c: false}, {t: "Home Tool Markup Language", c: false}] },
+                        { q: "ما هي اللغة المستخدمة لتنسيق صفحات الويب؟", a: [{t: "HTML", c: false}, {t: "JavaScript", c: false}, {t: "CSS", c: true}, {t: "Python", c: false}] },
+                        { q: "أي من التالي ليس لغة برمجة؟", a: [{t: "Python", c: false}, {t: "JavaScript", c: false}, {t: "HTML", c: true}, {t: "Java", c: false}] }
+                    ],
+                    "medium": [
+                        { q: "ما هو الـ 'DOM' في جافاسكريبت؟", a: [{t: "Document Object Model", c: true}, {t: "Data Object Model", c: false}, {t: "Document Oriented Middleware", c: false}, {t: "Disk Operating Module", c: false}] },
+                        { q: "ما الفرق بين '==' و '===' في جافاسكريبت؟", a: [{t: "لا فرق بينهما", c: false}, {t: "'===' يقارن القيمة والنوع، '==' يقارن القيمة فقط", c: true}, {t: "'==' يقارن القيمة والنوع، '===' يقارن القيمة فقط", c: false}, {t: "كلاهما يقارن النوع فقط", c: false}] },
+                        { q: "ما هي الدالة المستخدمة لطباعة شيء ما في الـ console؟", a: [{t: "console.log()", c: true}, {t: "print()", c: false}, {t: "log.console()", c: false}, {t: "document.write()", c: false}] },
+                        { q: "ما هو 'Git'؟", a: [{t: "لغة برمجة", c: false}, {t: "نظام تحكم بالإصدارات (Version Control)", c: true}, {t: "قاعدة بيانات", c: false}, {t: "محرر أكواد", c: false}] }
+                    ],
+                    "hard": [
+                        { q: "ما هو 'Closure' في جافاسكريبت؟", a: [{t: "دالة يمكنها الوصول إلى متغيرات نطاقها الخارجي حتى بعد انتهاء الدالة الخارجية", c: true}, {t: "خطأ في الكود يغلق البرنامج", c: false}, {t: "نوع بيانات", c: false}, {t: "طريقة لكتابة HTML داخل JS", c: false}] },
+                        { q: "ما هو 'Promise' في جافاسكريبت؟", a: [{t: "كائن يمثل الإكمال أو الفشل المستقبلي لعملية غير متزامنة", c: true}, {t: "متغير لا يمكن تغيير قيمته", c: false}, {t: "دالة سهمية (Arrow Function)", c: false}, {t: "نوع من الـ Loop", c: false}] },
+                        { q: "ما الفرق بين 'let' و 'var'؟", a: [{t: "'let' هو block-scoped و 'var' هو function-scoped", c: true}, {t: "'var' هو block-scoped و 'let' هو function-scoped", c: false}, {t: "لا يوجد فرق", c: false}, {t: "'let' للأرقام و 'var' للنصوص", c: false}] },
+                        { q: "ما هو 'API'؟", a: [{t: "واجهة برمجة التطبيقات (Application Programming Interface)", c: true}, {t: "لغة برمجة جديدة", c: false}, {t: "قاعدة بيانات سحابية", c: false}, {t: "برنامج تصميم واجهات", c: false}] },
+                        { q: "ما هو 'Recursion'؟", a: [{t: "دالة تستدعي نفسها", c: true}, {t: "نوع من هياكل البيانات", c: false}, {t: "طريقة لتعريف المتغيرات", c: false}, {t: "خطأ في الـ syntax", c: false}] }
+                    ],
+                    "senior": [
+                        { q: "ما هو 'Event Loop' في جافاسكريبت؟", a: [{t: "نمط تصميم يدير تنفيذ الكود غير المتزامن", c: true}, {t: "دالة `for` loop خاصة بالأحداث", c: false}, {t: "مكتبة خارجية لإدارة الأحداث", c: false}, {t: "خطأ يتسبب في تكرار الكود", c: false}] },
+                        { q: "ما الفرق بين 'Prototypal Inheritance' و 'Classical Inheritance'؟", a: [{t: "JS تستخدم Prototypal، Java تستخدم Classical", c: true}, {t: "JS تستخدم Classical، C++ تستخدم Prototypal", c: false}, {t: "كلاهما نفس الشيء", c: false}, {t: "Prototypal أسرع ولكن أقل أماناً", c: false}] },
+                        { q: "ما هو 'Tree Shaking'؟", a: [{t: "عملية إزالة الكود غير المستخدم (dead-code elimination) أثناء الـ bundling", c: true}, {t: "طريقة لترتيب هياكل البيانات الشجرية", c: false}, {t: "خطأ في الـ DOM", c: false}, {t: "تقنية لتسريع عرض الـ CSS", c: false}] },
+                        { q: "ما هو 'Webpack'؟", a: [{t: "Module Bundler", c: true}, {t: "إطار عمل (Framework) جافاسكريبت", c: false}, {t: "قاعدة بيانات NoSQL", c: false}, {t: "لغة برمجة", c: false}] },
+                        { q: "ما الفرق بين 'Shallow Copy' و 'Deep Copy'؟", a: [{t: "Shallow ينسخ المراجع (references)، Deep ينسخ القيم الفعلية (values)", c: true}, {t: "Deep ينسخ المراجع، Shallow ينسخ القيم", c: false}, {t: "Shallow للأرقام، Deep للكائنات", c: false}, {t: "لا فرق عملي بينهما", c: false}] },
+                        { q: "ما هي 'Pure Function'؟", a: [{t: "دالة تعيد نفس الناتج لنفس المدخلات وليس لها آثار جانبية (side effects)", c: true}, {t: "دالة لا تحتوي على أي 'if statements'", c: false}, {t: "دالة مكتوبة بـ JavaScript فقط", c: false}, {t: "دالة لا تأخذ أي معاملات (arguments)", c: false}] },
+                        { q: "ما هو 'Memoization'؟", a: [{t: "تقنية تخزين مؤقت (caching) لنتائج الدوال لتجنب الحسابات المكررة", c: true}, {t: "طريقة لضغط البيانات في الذاكرة", c: false}, {t: "عملية تحويل الكود إلى binary", c: false}, {t: "اسم آخر للـ 'Garbage Collection'", c: false}] },
+                        { q: "ما الفرق بين 'WebSocket' و 'HTTP'؟", a: [{t: "WebSocket ثنائي الاتجاه (bi-directional)، HTTP هو طلب/استجابة (request/response)", c: true}, {t: "HTTP أسرع من WebSocket", c: false}, {t: "WebSocket للصور فقط", c: false}, {t: "لا فرق، WebSocket هو إصدار جديد من HTTP", c: false}] },
+                        { q: "ما هو 'SOLID'؟", a: [{t: "مجموعة من خمس مبادئ تصميم للكتابة البرمجية النظيفة", c: true}, {t: "إطار عمل جافاسكريبت", c: false}, {t: "نوع من قواعد البيانات", c: false}, {t: "بروتوكول أمان للشبكات", c: false}] },
+                        { q: "ما هو 'Microservices Architecture'؟", a: [{t: "تقسيم التطبيق إلى مجموعة من الخدمات الصغيرة المستقلة", c: true}, {t: "بناء التطبيق بالكامل في ملف واحد", c: false}, {t: "استخدام خوادم صغيرة جداً", c: false}, {t: "مكتبة جافاسكريبت", c: false}] }
+                    ]
+                }
+            },
+            "history": {
+                "title": "تاريخ",
+                "levels": {
+                    "easy": [
+                        { q: "من هو أول رئيس للولايات المتحدة الأمريكية؟", a: [{t: "أبراهام لينكولن", c: false}, {t: "جورج واشنطن", c: true}, {t: "توماس جيفرسون", c:false}, {t: "جون آدامز", c: false}] },
+                        { q: "في أي قارة تقع مصر؟", a: [{t: "آسيا", c: false}, {t: "أوروبا", c: false}, {t: "أفريقيا", c: true}, {t: "أستراليا", c: false}] },
+                        { q: "ما هي أقدم حضارة معروفة في العالم؟", a: [{t: "الحضارة المصرية", c: false}, {t: "حضارة وادي السند", c: false}, {t: "حضارة بلاد ما بين النهرين (سومر)", c: true}, {t: "الحضارة الصينية", c: false}] }
+                    ],
+                    "medium": [
+                        { q: "في أي عام سقط جدار برلين؟", a: [{t: "1989", c: true}, {t: "1991", c: false}, {t: "1985", c: false}, {t: "1990", c: false}] },
+                        { q: "من هو القائد المغولي الذي أسس إمبراطورية واسعة في آسيا؟", a: [{t: "أتيلا الهوني", c: false}, {t: "جنكيز خان", c: true}, {t: "تيمورلنك", c: false}, {t: "قوبلاي خان", c: false}] },
+                        { q: "كم دامت 'حرب المائة عام'؟", a: [{t: "100 عام بالضبط", c: false}, {t: "116 عاماً", c: true}, {t: "99 عاماً", c: false}, {t: "150 عاماً", c: false}] },
+                        { q: "ما هي الإمبراطورية التي كانت تعرف بأنها 'لا تغيب عنها الشمس'؟", a: [{t: "الإمبراطورية الرومانية", c: false}, {t: "الإمبراطورية العثمانية", c: false}, {t: "الإمبراطورية البريطانية", c: true}, {t: "الإمبراطورية المغولية", c: false}] }
+                    ],
+                    "hard": [
+                        { q: "ما هي 'الثورة المجيدة' (Glorious Revolution)؟", a: [{t: "الثورة الفرنسية", c: false}, {t: "الثورة التي أطاحت بالملك جيمس الثاني ملك إنجلترا عام 1688", c: true}, {t: "الثورة الأمريكية", c: false}, {t: "الثورة الروسية", c: false}] },
+                        { q: "من هو الفيلسوف اليوناني الذي كان تلميذاً لسقراط ومعلماً لأرسطو؟", a: [{t: "أفلاطون", c: true}, {t: "فيثاغورس", c: false}, {t: "هيرودوت", c: false}, {t: "ديموقريطوس", c: false}] },
+                        { q: "ما هي الدولة التي أهدت تمثال الحرية للولايات المتحدة؟", a: [{t: "بريطانيا", c: false}, {t: "ألمانيا", c: false}, {t: "إيطاليا", c: false}, {t: "فرنسا", c: true}] },
+                        { q: "ما اسم المعركة التي هُزم فيها نابليون بونابرت هزيمته النهائية عام 1815؟", a: [{t: "معركة أوسترليتز", c: false}, {t: "معركة واترلو", c: true}, {t: "معركة لايبزيغ", c: false}, {t: "معركة بورودينو", c: false}] },
+                        { q: "ما هو الاسم القديم لإيران؟", a: [{t: "بلاد ما بين النهرين", c: false}, {t: "فارس", c: true}, {t: "الأناضول", c: false}, {t: "سيام", c: false}] }
+                    ]
+                }
+            },
+            "science": {
+                "title": "علوم",
+                "levels": {
+                    "easy": [
+                        { q: "كم عدد الكواكب في نظامنا الشمسي؟", a: [{t: "8", c: true}, {t: "9", c:false}, {t: "7", c: false}, {t: "10", c: false}] },
+                        { q: "ما هو الرمز الكيميائي للماء؟", a: [{t: "O2", c: false}, {t: "CO2", c: false}, {t: "H2O", c: true}, {t: "NaCl", c: false}] },
+                        { q: "ما هي القوة التي تجذب الأشياء نحو مركز الأرض؟", a: [{t: "المغناطيسية", c: false}, {t: "الجاذبية", c: true}, {t: "الاحتكاك", c: false}, {t: "الكهرباء", c: false}] }
+                    ],
+                    "medium": [
+                        { q: "ما هو أسرع شيء في الكون؟", a: [{t: "الصوت", c: false}, {t: "الضوء", c: true}, {t: "الفهد", c: false}, {t: "الكهرباء", c: false}] },
+                        { q: "ما هو 'بيت الطاقة' في الخلية؟", a: [{t: "النواة", c: false}, {t: "الريبوسوم", c: false}, {t: "الميتوكوندريا", c: true}, {t: "الغشاء البلازمي", c: false}] },
+                        { q: "ما هو الكوكب الأحمر؟", a: [{t: "المريخ", c: true}, {t: "الزهرة", c: false}, {t: "المشتري", c: false}, {t: "عطارد", c: false}] },
+                        { q: "ما هو الغاز الذي تتنفسه النباتات لإنتاج الأكسجين (في عملية البناء الضوئي)؟", a: [{t: "الأكسجين", c: false}, {t: "النيتروجين", c: false}, {t: "ثاني أكسيد الكربون", c: true}, {t: "الهيدروجين", c: false}] }
+                    ],
+                    "hard": [
+                        { q: "ما هي 'النسبية العامة'؟", a: [{t: "نظرية الجاذبية لألبرت أينشتاين", c: true}, {t: "نظرية تطور داروين", c: false}, {t: "قانون نيوتن للحركة", c: false}, {t: "نظرية الانفجار العظيم", c: false}] },
+                        { q: "ما هو الحمض النووي (DNA)؟", a: [{t: "بروتين لنقل الأكسجين", c: false}, {t: "جزيء يحمل التعليمات الوراثية", c: true}, {t: "إنزيم هضمي", c: false}, {t: "نوع من السكر في الدم", c: false}] },
+                        { q: "ما هي سرعة الضوء في الفراغ (تقريباً)؟", a: [{t: "300,000 كم/ثانية", c: true}, {t: "150,000 كم/ثانية", c: false}, {t: "3,000 كم/ثانية", c: false}, {t: "30,000 كم/ساعة", c: false}] },
+                        { q: "ما هو 'الثقب الأسود'؟", a: [{t: "نجم ميت بارد", c: false}, {t: "منطقة في الفضاء جاذبيتها قوية جداً لا يستطيع حتى الضوء الهروب منها", c: true}, {t: "سديم مظلم", c: false}, {t: "كوكب بدون غلاف جوي", c: false}] },
+                        { q: "ما هو الجدول الدوري؟", a: [{t: "جدول لمواعيد الكسوف والخسوف", c: false}, {t: "ترتيب للعناصر الكيميائية", c: true}, {t: "خريطة للجينوم البشري", c: false}, {t: "قائمة بالثوابت الفيزيائية", c: false}] }
+                    ]
+                }
+            }
+        };
+
+        //==================================
+        // 2. DOM References (ربط عناصر HTML)
+        //==================================
+        const body = document.body;
+        const animationContainer = document.getElementById('animation-container');
+        
+        // Screens
+        const categoryScreen = document.getElementById('category-screen');
+        const difficultyScreen = document.getElementById('difficulty-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        
+        // Animation Containers
+        const generalAnimation = document.getElementById('general-animation');
+        const matrixAnimation = document.getElementById('matrix-animation');
+        const starfieldAnimation = document.getElementById('starfield-animation');
+        const oldFilmAnimation = document.getElementById('old-film-animation');
+        
+        // Buttons
+        const categoryButtons = document.querySelectorAll('.category-btn');
+        const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+        const backToCategoriesBtn = document.getElementById('back-to-categories');
+        const confirmNextBtn = document.getElementById('confirm-next-btn');
+        const goHomeBtn = document.getElementById('go-home');
+        
+        // Display Elements
+        const difficultyTitle = document.getElementById('difficulty-title');
+        const seniorLevelBtn = document.getElementById('senior-level-btn');
+        const questionCounter = document.getElementById('question-counter');
+        const timerElement = document.getElementById('timer');
+        const questionText = document.getElementById('question-text');
+        const answerButtonsContainer = document.getElementById('answer-buttons');
+        const scoreCircle = document.getElementById('score-circle');
+        const scoreText = document.getElementById('score-text');
+
+        //==================================
+        // 3. Quiz State (حالة الاختبار)
+        //==================================
+        let currentCategory = '';
+        let currentDifficulty = '';
+        let currentQuestions = [];
+        let questionIndex = 0;
+        let score = 0;
+        let timer;
+        let timeLeft = 30;
+        let answered = false;
+        let selectedButton = null;
+
+        //==================================
+        // 4. Navigation Functions (دوال التنقل)
+        //==================================
+
+        function showScreen(screenId) {
+            categoryScreen.classList.add('hidden');
+            difficultyScreen.classList.add('hidden');
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function goHome() {
+            clearThemes();
+            stopTimer();
+            showScreen('category-screen');
+        }
+
+        function selectCategory(e) {
+            currentCategory = e.currentTarget.dataset.category;
+            const categoryTitle = quizData[currentCategory].title;
+            difficultyTitle.textContent = `اختر مستوى لـ: ${categoryTitle}`;
+
+            // إظهار أو إخفاء زر "Senior"
+            if (currentCategory === 'programming') {
+                seniorLevelBtn.classList.remove('hidden');
+            } else {
+                seniorLevelBtn.classList.add('hidden');
+            }
+            
+            // تطبيق الواجهة (Theme)
+            applyTheme(currentCategory);
+            showScreen('difficulty-screen');
+        }
+
+        function selectDifficulty(e) {
+            currentDifficulty = e.currentTarget.dataset.difficulty;
+            startQuiz();
+        }
+        
+        //==================================
+        // 5. Theme & Animation Logic (منطق الواجهات)
+        //==================================
+        
+        // Matrix Animation Logic
+        let matrixCtx = matrixAnimation.getContext('2d');
+        let matrixInterval;
+        let letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%';
+        let drops = [];
+
+        function startMatrixAnimation() {
+            matrixAnimation.classList.remove('hidden');
+            matrixAnimation.width = window.innerWidth;
+            matrixAnimation.height = window.innerHeight;
+            matrixCtx = matrixAnimation.getContext('2d');
+            
+            letters = letters.split('');
+            let columns = matrixAnimation.width / 20;
+            drops = [];
+            for (let i = 0; i < columns; i++) {
+                drops[i] = 1;
+            }
+            
+            stopMatrixAnimation(); // Clear any previous interval
+            matrixInterval = setInterval(drawMatrix, 33);
+        }
+
+        function drawMatrix() {
+            matrixCtx.fillStyle = 'rgba(0, 0, 0, .05)';
+            matrixCtx.fillRect(0, 0, matrixAnimation.width, matrixAnimation.height);
+            matrixCtx.fillStyle = '#0f0'; // Green text
+            for (let i = 0; i < drops.length; i++) {
+                let text = letters[Math.floor(Math.random() * letters.length)];
+                matrixCtx.fillText(text, i * 20, drops[i] * 20);
+                if (drops[i] * 20 > matrixAnimation.height && Math.random() > .975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        function stopMatrixAnimation() {
+            clearInterval(matrixInterval);
+            matrixAnimation.classList.add('hidden');
+        }
+
+        // Theme Control
+        function applyTheme(category) {
+            clearThemes();
+            body.classList.add(`theme-${category}`);
+            animationContainer.style.display = 'block';
+
+            if (category === 'programming') {
+                startMatrixAnimation();
+            } else if (category === 'science') {
+                starfieldAnimation.classList.remove('hidden');
+            } else if (category === 'history') {
+                oldFilmAnimation.classList.remove('hidden');
+            } else if (category === 'general') {
+                generalAnimation.classList.remove('hidden');
+            }
+        }
+
+        function clearThemes() {
+            body.className = ''; // Remove all classes
+            body.classList.add('theme-default'); // Add default
+            animationContainer.style.display = 'none';
+            
+            // Stop all animations
+            stopMatrixAnimation();
+            starfieldAnimation.classList.add('hidden');
+            oldFilmAnimation.classList.add('hidden');
+            generalAnimation.classList.add('hidden');
+        }
+
+        //==================================
+        // 6. Quiz Logic (منطق الاختبار)
+        //==================================
+
+        function startQuiz() {
+            // جلب الأسئلة بناءً على العدد المطلوب
+            const allQuestions = quizData[currentCategory].levels[currentDifficulty];
+            const questionCount = { "easy": 3, "medium": 4, "hard": 5, "senior": 10 }[currentDifficulty];
+            
+            currentQuestions = shuffleArray(allQuestions).slice(0, questionCount);
+            
+            questionIndex = 0;
+            score = 0;
+            showScreen('quiz-screen');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            resetState();
+            
+            if (questionIndex >= currentQuestions.length) {
+                showResults();
+                return;
+            }
+
+            const question = currentQuestions[questionIndex];
+            questionText.textContent = question.q;
+            questionCounter.textContent = `السؤال ${questionIndex + 1} / ${currentQuestions.length}`;
+
+            // خلط الإجابات
+            const shuffledAnswers = shuffleArray(question.a);
+            
+            shuffledAnswers.forEach(answer => {
+                const button = document.createElement('button');
+                button.textContent = answer.t;
+                button.classList.add('answer-btn', 'btn-secondary', 'p-4', 'rounded-lg', 'text-lg', 'w-full', 'transition-all');
+                if (answer.c) {
+                    button.dataset.correct = "true";
+                }
+                button.addEventListener('click', selectAnswer);
+                answerButtonsContainer.appendChild(button);
+            });
+            
+            startTimer();
+        }
+
+        function resetState() {
+            while (answerButtonsContainer.firstChild) {
+                answerButtonsContainer.removeChild(answerButtonsContainer.firstChild);
+            }
+            confirmNextBtn.textContent = "تأكيد";
+            confirmNextBtn.disabled = true;
+            answered = false;
+            selectedButton = null;
+            stopTimer();
+        }
+
+        function selectAnswer(e) {
+            if (answered) return; // لا تفعل شيئاً إذا تم التأكيد
+            
+            // إزالة 'selected' من جميع الأزرار
+            Array.from(answerButtonsContainer.children).forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // إضافة 'selected' للزر المختار
+            selectedButton = e.target;
+            selectedButton.classList.add('selected');
+            confirmNextBtn.disabled = false;
+        }
+
+        function handleConfirmNext() {
+            // الحالة 1: المستخدم ضغط "تأكيد"
+            if (!answered) {
+                answered = true;
+                stopTimer();
+                confirmNextBtn.disabled = false; // تفعيل الزر للتالي
+                
+                const isCorrect = selectedButton.dataset.correct === "true";
+                
+                // تعطيل جميع الأزرار
+                Array.from(answerButtonsContainer.children).forEach(btn => {
+                    btn.disabled = true;
+                });
+
+                if (isCorrect) {
+                    selectedButton.classList.add('correct');
+                    score++;
+                } else {
+                    selectedButton.classList.add('wrong');
+                    // إزالة 'selected' لإخفاء اللون الأزرق
+                    selectedButton.classList.remove('selected'); 
+                    
+                    // إظهار الإجابة الصحيحة
+                    const correctButton = Array.from(answerButtonsContainer.children).find(btn => btn.dataset.correct === "true");
+                    if (correctButton) {
+                        correctButton.classList.add('show-correct');
+                    }
+                }
+                
+                // التحقق إذا كان آخر سؤال
+                if (questionIndex === currentQuestions.length - 1) {
+                    confirmNextBtn.textContent = "عرض النتيجة";
+                } else {
+                    confirmNextBtn.textContent = "السؤال التالي";
+                }
+
+            // الحالة 2: المستخدم ضغط "السؤال التالي"
+            } else {
+                questionIndex++;
+                showQuestion();
+            }
+        }
+        
+        function showResults() {
+            stopTimer();
+            clearThemes(); // إرجاع الواجهة الافتراضية
+            showScreen('results-screen');
+            
+            const percentage = Math.round((score / currentQuestions.length) * 100);
+            scoreText.textContent = `لقد أجبت على ${score} من ${currentQuestions.length} بشكل صحيح.`;
+            scoreCircle.textContent = `${percentage}%`;
+            
+            // تحديد لون دائرة النتيجة
+            if (percentage >= 80) {
+                scoreCircle.style.borderColor = "#10b981"; // أخضر
+                scoreCircle.style.color = "#065f46";
+            } else if (percentage >= 50) {
+                scoreCircle.style.borderColor = "#f59e0b"; // أصفر
+                scoreCircle.style.color = "#b45309";
+            } else {
+                scoreCircle.style.borderColor = "#ef4444"; // أحمر
+                scoreCircle.style.color = "#991b1b";
+            }
+        }
+
+        //==================================
+        // 7. Timer Logic (منطق المؤقت)
+        //==================================
+
+        function startTimer() {
+            timeLeft = 30; // 30 ثانية لكل سؤال
+            timerElement.textContent = timeLeft;
+            timerElement.classList.remove('bg-red-700'); // إرجاع اللون الطبيعي
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                if (timeLeft <= 5) {
+                    timerElement.classList.add('bg-red-700'); // تحذير
+                }
+                if (timeLeft <= 0) {
+                    timeUp();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timer);
+        }
+        
+        function timeUp() {
+            stopTimer();
+            // تحديد إجابة وهمية (خاطئة)
+            selectedButton = document.createElement('button'); // زر وهمي
+            selectedButton.dataset.correct = "false"; // اعتباره خطأ
+            handleConfirmNext(); // التعامل معه كإجابة خاطئة
+        }
+
+        //==================================
+        // 8. Utility Functions (دوال مساعدة)
+        //==================================
+        
+        function shuffleArray(array) {
+            const newArray = [...array]; // إنشاء نسخة جديدة
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        //==================================
+        // 9. Event Listeners (ربط الأحداث)
+        //==================================
+        
+        categoryButtons.forEach(button => {
+            button.addEventListener('click', selectCategory);
+        });
+        
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', selectDifficulty);
+        });
+        
+        backToCategoriesBtn.addEventListener('click', goHome);
+        goHomeBtn.addEventListener('click', goHome);
+        confirmNextBtn.addEventListener('click', handleConfirmNext);
+
+        // Resize Matrix on window resize
+        window.addEventListener('resize', () => {
+            if (body.classList.contains('theme-programming')) {
+                startMatrixAnimation(); // إعادة تشغيل الماتركس بأبعاد جديدة
+            }
+        });
+        
+        // إعداد الواجهة الافتراضية عند التحميل
+        goHome();
+
+    </script>
+</body>
+</html>
+
